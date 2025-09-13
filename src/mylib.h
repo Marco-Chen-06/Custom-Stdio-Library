@@ -4,14 +4,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 // based on GNU libc IO_FILE structure
 struct MYSTREAM{
 	char *ptr; // curent pointer to buffer
 	char *base; // base address of buffer
 	char *end; // end address of buffer
+	char buf[4096]; // stores read and write data
 	int remaining;  // number of characters left in the buffer
-	int flags; // read, write, or error
+	char flag; // read, write, or error
+	int fd; // file descriptor
 };
 
 struct MYSTREAM *myfopen(const char *pathname, const char *mode);
