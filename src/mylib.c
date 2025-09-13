@@ -7,6 +7,8 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 		errno = EINVAL;
 		return NULL;
 	}
-	struct MYSTREAM *stream;
-	return stream;
+	struct MYSTREAM *pStream;
+	pStream = (struct MYSTREAM *)malloc(sizeof(struct MYSTREAM));
+	
+	return pStream;
 }

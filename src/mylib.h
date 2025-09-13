@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 // based on GNU libc IO_FILE structure
 struct MYSTREAM{
