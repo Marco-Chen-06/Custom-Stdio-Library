@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <fcntl.h>
-
+#include <unistd.h>
 // somewhat based on GNU libc IO_FILE structure
 struct MYSTREAM{
 	char* ptr; // pointer to current index of buffer
@@ -19,5 +19,6 @@ struct MYSTREAM{
 
 struct MYSTREAM *myfopen(const char *pathname, const char *mode);
 struct MYSTREAM *myfdopen(int filedesc, const char *mode);
+int myfgetc(struct MYSTREAM *stream);
 
 #endif

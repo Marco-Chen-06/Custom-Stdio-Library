@@ -29,9 +29,8 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 	// initialize the buffer data structure
 	pStream->base = &(pStream->buf[0]);
 	pStream->ptr = &(pStream->buf[0]);
-	pStream->end = &(pStream->buf[4096]);
 
-	pStream->remaining = pStream->end - pStream->ptr;
+	pStream->remaining = 0;
 
 	pStream->mode = *mode; 
 
@@ -58,13 +57,48 @@ struct MYSTREAM *myfdopen(int filedesc, const char *mode) {
 	// initialize the buffer data structure
 	pStream->base = &(pStream->buf[0]);
 	pStream->ptr = &(pStream->buf[0]);
-	pStream->end = &(pStream->buf[4096]);
 
-	pStream->remaining = pStream->end - pStream->ptr;
+	pStream->remaining = 0;
 
 	pStream->mode = *mode; 
 	pStream->fd = filedesc;
 
 	
 	return pStream;
+}
+
+int myfgetc(struct MYSTREAM *stream) {
+	// make sure fd of stream was opened for read only
+	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) != O_RDONLY) {
+		errno = EBADF;
+		return -1;
+	}
+
+	// if no data in buffer, populate it with at most 4096 bytes of data 	
+	if (stream->remaining <= 0) {
+		// handle failure of read system call
+		if ((stream->remaining = read(stream->fd, stream->buf, 4096)) < 0) {
+			return -1;
+		}
+
+		// if end of file has been reached, return the value EOF
+		if (stream->remaining == 0) {
+			return -1;
+		}
+		stream->end = stream->base + stream->remaining;
+	}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
 }
