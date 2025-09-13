@@ -6,17 +6,18 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-// based on GNU libc IO_FILE structure
+// somewhat based on GNU libc IO_FILE structure
 struct MYSTREAM{
-	char *ptr; // curent pointer to buffer
-	char *base; // base address of buffer
-	char *end; // end address of buffer
-	char buf[4096]; // stores read and write data
+	char* ptr; // pointer to current index of buffer
+	char* base; // base address of buffer
+	char* end; // address of last element of buffer
+	char buf[4096]; // stores read or write data
 	int remaining;  // number of characters left in the buffer
-	char flag; // read, write, or error
+	char mode; // read, write, or error
 	int fd; // file descriptor
 };
 
 struct MYSTREAM *myfopen(const char *pathname, const char *mode);
+struct MYSTREAM *myfdopen(int filedesc, const char *mode);
 
 #endif
