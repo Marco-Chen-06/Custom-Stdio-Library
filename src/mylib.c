@@ -17,6 +17,8 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 		if ((pStream->fd = open(pathname, O_RDONLY)) < 0) {
 			return NULL;
 		}
+		// for reading, stream starts with 0 bytes left to read
+		pStream->remaining = 0;
 	}
 
 	//open the file for writing
@@ -24,13 +26,13 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 		if ((pStream->fd = open(pathname, O_WRONLY)) < 0) {
 			return NULL;
 		}
+		// for writing, stream starts with BUFSIZ bytes left to write
+		pStream->remaining = BUFSIZ;
 	}
 	
 	// initialize the buffer data structure
 	pStream->base = &(pStream->buf[0]);
 	pStream->ptr = &(pStream->buf[0]);
-
-	pStream->remaining = 0;
 
 	pStream->mode = *mode; 
 
@@ -74,10 +76,10 @@ int myfgetc(struct MYSTREAM *stream) {
 		return -1;
 	}
 
-	// if no data in buffer, populate it with at most 4096 bytes of data 	
+	// if no data in buffer, populate it with at most BUFSIZ bytes of data 	
 	if (stream->remaining <= 0) {
 		// handle failure of read system call
-		if ((stream->remaining = read(stream->fd, stream->buf, 4096)) < 0) {
+		if ((stream->remaining = read(stream->fd, stream->buf, BUFSIZ)) < 0) {
 			return -1;
 		}
 
@@ -85,20 +87,39 @@ int myfgetc(struct MYSTREAM *stream) {
 		if (stream->remaining == 0) {
 			return -1;
 		}
+
+		// if data was read from the file, initialize pointers
 		stream->end = stream->base + stream->remaining;
+		stream->ptr = stream->base;
 	}
 
-
-
+	// update buffer data structure and return the requested character
+	int output_char;
+	output_char = *(stream->ptr++);
+	stream->remaining = stream->end - stream->ptr;
+	return output_char;
 }
 
+int myfputc(int c, struct MYSTREAM *stream) {
+	// make sure fd of stream was opened for write only
+	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) != O_WRONLY) {
+		errno = EBADF;
+		return -1;
+	}
 
+	if (stream->remaining <= 0) {
+		int bytes_written;
+		if ((bytes_written = write(stream->fd, stream->buf, BUFSIZ)) <= 0) {
+			// handle failure of write system call
+			return -1;
+		} else if (bytes_written < 4096) {
+			// treat partial write as an error
+			return -1;
+		}
+	}
 
-
-
-
-
-
-
-
+	*(stream->ptr++) = c;
+	stream->remaining = stream->end - stream->ptr;
+	return c;
 }
+
