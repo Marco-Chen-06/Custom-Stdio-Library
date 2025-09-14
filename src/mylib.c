@@ -116,6 +116,7 @@ int myfputc(int c, struct MYSTREAM *stream) {
 			// treat partial write as an error
 			return -1;
 		}
+		stream->ptr = stream->base;
 	}
 
 	*(stream->ptr++) = c;
@@ -123,3 +124,33 @@ int myfputc(int c, struct MYSTREAM *stream) {
 	return c;
 }
 
+int myfclose(struct MYSTREAM *stream) {
+	// if fd of stream was opened for read only, close fd
+	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) == O_RDONLY) {
+		if (close(stream->fd) < 0) {
+			return -1;
+		}
+		free(stream);
+		stream = NULL;
+		return 0;
+	}
+	// if fd of stream was opened for write only, flush buffer and close fd
+	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) == O_WRONLY) {
+		int bytes_to_write = stream->ptr - stream->base;
+		int bytes_written;
+		if ((bytes_written = write(stream->fd, stream->buf, bytes_to_write)) <= 0) {
+			// handle failure of write system call
+			return -1;
+		} else if (bytes_written < bytes_to_write) {
+			// treat partial write as an error
+			return -1;
+		}
+		
+		if (close(stream->fd) < 0) {
+			return -1;
+		}
+		free (stream);
+		stream = NULL;
+		return 0;
+	}
+}
