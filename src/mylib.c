@@ -153,4 +153,10 @@ int myfclose(struct MYSTREAM *stream) {
 		stream = NULL;
 		return 0;
 	}
+	/*
+	 * The program should only reach this condition if the file was
+	 * not opened for either read or write only. Nonetheless, this 
+	 * indicates an error.
+	 */
+	return -1;
 }
