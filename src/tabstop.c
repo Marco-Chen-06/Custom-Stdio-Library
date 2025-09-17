@@ -3,13 +3,17 @@
 // helper function used to write all relevant elements from a buffer to an output stream
 int write_to_output(struct MYSTREAM *outputStream, int bytes_filled, char *buf) {
 	int index = 0;
-	while (index <= bytes_filled) {
+	while (index < bytes_filled) {
 		myfputc(buf[index++], outputStream);
 	}
 	return 0;
 }
 
-// process data from standard input, 
+/*
+ * Process data from stdin, and write it to outfile or stdout depending on hasOutfile.
+ * Only a maximum of BUFSIZ bytes can be processed from stdin.
+ * Note: Process is used as a verb and not a noun in this naming convention.
+ */
 int process_stdin(bool hasOutfile, char *outfile) {
 	struct MYSTREAM *inputStream;
 	struct MYSTREAM *outputStream;
@@ -17,7 +21,7 @@ int process_stdin(bool hasOutfile, char *outfile) {
 
 	// buf is BUFSIZ*4 bytes to avoid someone typing BUFSIZ tabs and overflowing buffer
 	char buf[BUFSIZ*4];
-	char index = 0; 
+	int index = 0; // current index of buf (also represents num bytes to write)
 
 	// open stdin, return -1 if failure
 	if ((inputStream = myfdopen(0, "r")) == NULL) {
@@ -57,7 +61,7 @@ int process_stdin(bool hasOutfile, char *outfile) {
 	 */
 	write_to_output(outputStream, index, buf);
 
-	// close outfile if opened, return -1 if unsuccessful
+	// close outfile if opened, return -1 if failure
 	if (hasOutfile) {
 		if (myfclose(outputStream) < 0) {
 			perror("myfclose error in process_stdin: ");
@@ -67,6 +71,11 @@ int process_stdin(bool hasOutfile, char *outfile) {
 	return 0;
 }
 
+/*
+ * Process data from infile, and write it to outfile or stdout depending on hasOutfile.
+ * In contract to process_stdin, more than BUFSIZ bytes can be processed from infile.
+ * Note: Process is used as a verb and not a noun in this naming convention.
+ */
 int process_infile(bool hasOutfile, char *outfile, char *infile) {
 	struct MYSTREAM *inputStream;
 	struct MYSTREAM *outputStream;
@@ -74,8 +83,8 @@ int process_infile(bool hasOutfile, char *outfile, char *infile) {
 
 	// buf is still BUFSIZ*4 bytes to avoid a file with BUFSIZ tabs and overflowing buf
 	char buf[BUFSIZ*4];
-	char index = 0; // current index of buf
-	char count = 0; // current number of bytes read from infile
+	int index = 0; // current index of buf (also represents num bytes to write)
+	int count = 0; // current number of bytes read from infile
 
 	// open infile, return -1 if failure
 	if ((inputStream = myfopen(infile, "r")) == NULL) {
@@ -97,22 +106,47 @@ int process_infile(bool hasOutfile, char *outfile, char *infile) {
 		}
 	}
 
-	//while ((c = myfgetc(stream)) != EOF) {
-	//	// make sure buf doesn't overflow and more bytes can be processed
-	//	if (count >= BUFSIZ) {
-//
-//		}
-//
-//	}
+	while ((c = myfgetc(inputStream)) != EOF) {
+		if (count >= BUFSIZ) {
+			// write contents of buf to outputStream
+			write_to_output(outputStream, index, buf);
+			
+			/*
+			 * reinitialize counters, and leave buf as is because its data 
+			 * will be overwritten by the next write syscalls
+			 */
+			count = 0;
+			index = 0;
+		}
+		
+		if (c == '\t') {
+			for (int i = 0; i < 4; i++) {
+				buf[index++] = ' ';
+			}
+		} else {
+			buf[index++] = c;
+		}
+		count++;
+	}
+	write_to_output(outputStream, index, buf);
+
+
+	// close outfile if opened, return -1 if failure
+	if (hasOutfile) {
+		if (myfclose(outputStream) < 0) {
+			perror("myfclose error in process_infile: ");
+			return -1;
+		}
+	}
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
 	struct MYSTREAM *stream;
-	int opt;
+	int opt = 0;
 
-	bool hasOutfile;
-	char *outfile; // points to the outfile, if it is provided
+	bool hasOutfile = false;
+	char *outfile = NULL; // points to the outfile, if it is provided
 	while ((opt = getopt(argc, argv, ":o:")) != -1) {
 		switch(opt) {
 			case 'o':
@@ -145,12 +179,6 @@ int main(int argc, char* argv[]) {
 			return 255;
 		}
 		return 0;
-	}
-
-	for (int i = optind; i < argc; i++) {
-		printf("argcount: %d\n", argc);
-		printf("optind: %d\n", optind);
-		// printf("extra argument: %s\n", argv[i]);
 	}
 	return 0;
 }
