@@ -4,7 +4,8 @@
 int process_stdin(bool hasOutfile, char *outfile) {
 	struct MYSTREAM *stream;
 	char c;
-	// buf is BUFSIZ*4 bytes to avoid someone typing 4096 tabs and overflowing buffer
+
+	// buf is BUFSIZ*4 bytes to avoid someone typing BUFSIZ tabs and overflowing buffer
 	char buf[BUFSIZ*4];
 	char index; 
 
@@ -14,6 +15,7 @@ int process_stdin(bool hasOutfile, char *outfile) {
 		return -1;
 	}
 
+	// process standard input and put it into buffer
 	while ((c = myfgetc(stream)) != EOF) {
 		if (c == '\t') {
 			for (int i = 0; i < 4; i++) {
@@ -49,7 +51,6 @@ int process_stdin(bool hasOutfile, char *outfile) {
 		myfputc(buf[reverse_index++], stream);
 	}
 
-
 	// close outfile if opened, return -1 if unsuccessful
 	if (hasOutfile) {
 		if (myfclose(stream) < 0) {
@@ -57,10 +58,17 @@ int process_stdin(bool hasOutfile, char *outfile) {
 			return -1;
 		}
 	}
-
-
-
 	return 0;
+}
+
+int process_infile(bool hasOutfile, char*outfile) {
+	struct MYSTREAM *stream;
+	char c;
+
+	// buf is still BUFSIZ*4 bytes to avoid someone typing BUFSIZ tabs and overflowing
+	char buf[BUFSIZ*4];
+	char index;
+	
 }
 
 int main(int argc, char* argv[]) {
@@ -89,14 +97,17 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	// if there is no non-option argument, open stdin for writing
+	// if there is no non-option argument, open stdin for writing. Otherwise, open infile.
 	if ((argc - optind) == 0) {
-		// open standard input, return NULL if failure
+		// open standard input, return 255 if failure
 		if (process_stdin(hasOutfile, outfile)) {
 			return 255;
 		}
 	} else if ((argc - optind) == 1) {
-		// if there is one non-option argument, open infile for writing
+		// open infile, return 255 if failure
+		if (process_infile(hasOutfile, outfile)) {
+			return 255;
+		}
 		return 0;
 	}
 
