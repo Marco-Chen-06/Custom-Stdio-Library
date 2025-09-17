@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 // somewhat based on GNU libc IO_FILE structure
 struct MYSTREAM{

@@ -1,3 +1,4 @@
 #include "mylib.h"
 
-int process_stdin();
+int process_stdin(bool hasOutfile, char *outfile);
+
