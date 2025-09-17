@@ -1,5 +1,17 @@
+/*
+ * mylib.c -- greatly reduced feature set stdio library implementation file
+ * Cooper Union ECE357 - Operating Systems Pset1 
+ */
+
 #include "mylib.h"
 #include <errno.h>
+
+/*
+ * I didn't comment the names of the function prototypes because all functions
+ * are intended to do exactly as the pset1 instructions. However, I commented
+ * myfclose because I have one extra bit of logic for "closing" stdout for writing 
+ * which was not explicitly specified in the pset1 instructions.
+ */
 
 struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 	// make sure mode is either "r" or "w", return NULL if not
@@ -136,6 +148,13 @@ int myfputc(int c, struct MYSTREAM *stream) {
 	return c;
 }
 
+/*
+ * If stream was opened for reading, close the file descriptor.
+ * If the stream was opened for writing, call write to flush the buffer,
+ * then close the file descriptor. If the fd was stdout, don't close the
+ * file descriptor.
+ * Return 0 for success, return -1 for failure
+ */
 int myfclose(struct MYSTREAM *stream) {
 	// if fd of stream was opened for read only, close fd
 	if (stream->mode == 'r') {
@@ -149,7 +168,6 @@ int myfclose(struct MYSTREAM *stream) {
 	}
 	// if fd of stream was opened for write only, flush buffer and close fd
 	if (stream->mode == 'w') {
-
 		int bytes_to_write = stream->ptr - stream->base;
 		int bytes_written; // variable used solely to check for partial write
 		// write remaining bytes to fd, return -1 if failure

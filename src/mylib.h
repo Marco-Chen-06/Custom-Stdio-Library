@@ -1,3 +1,8 @@
+/*
+ * mylib.h -- greatly reduced feature set stdio library header file
+ * Cooper Union ECE357 Operating Systems Pset1
+ */
+
 #ifndef MY_LIB_H
 #define MY_LIB_H
 

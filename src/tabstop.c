@@ -1,3 +1,8 @@
+/*
+ * tabstop.c -- process input one char at a time, replace tabs with 4 spaces
+ * Cooper Union ECE357 Operating Systems Pset1
+ */
+
 #include "tabstop.h"
 
 // helper function used to write all relevant elements from a buffer to an output stream
@@ -47,10 +52,12 @@ int process_stdin(bool hasOutfile, char *outfile) {
 	// process standard input and put it into buffer
 	while ((c = myfgetc(inputStream)) != EOF) {
 		if (c == '\t') {
+			// replace tabs with 4 spaces
 			for (int i = 0; i < 4; i++) {
 				buf[index++] = ' ';
 			}
 		} else {
+			// process other characters like normal
 			buf[index++] = c;
 		}
 	}	
@@ -73,7 +80,6 @@ int process_stdin(bool hasOutfile, char *outfile) {
 /*
  * Process data from infile, and write it to outfile or stdout depending on hasOutfile.
  * In contract to process_stdin, more than BUFSIZ bytes can be processed from infile.
- * Note: Process is used as a verb and not a noun in this naming convention.
  */
 int process_infile(bool hasOutfile, char *outfile, char *infile) {
 	struct MYSTREAM *inputStream;
@@ -119,10 +125,12 @@ int process_infile(bool hasOutfile, char *outfile, char *infile) {
 		}
 		
 		if (c == '\t') {
+			// replace tabs with 4 spaces
 			for (int i = 0; i < 4; i++) {
 				buf[index++] = ' ';
 			}
 		} else {
+			// process other characters like normal
 			buf[index++] = c;
 		}
 		count++;
