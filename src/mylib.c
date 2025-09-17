@@ -3,7 +3,7 @@
 
 struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 	// make sure mode is either "r" or "w", return NULL if not
-	if ((mode == nullptr) || ((*mode != 'r') && (*mode != 'w'))) {
+	if ((mode == NULL) || ((*mode != 'r') && (*mode != 'w'))) {
 		errno = EINVAL;
 		return NULL;
 	}
@@ -43,7 +43,7 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 
 struct MYSTREAM *myfdopen(int filedesc, const char *mode) {
 	// make sure mode is either "r" or "w", return NULL if not
-	if ((mode == nullptr) || ((*mode != 'r') && (*mode != 'w'))) {
+	if ((mode == NULL) || ((*mode != 'r') && (*mode != 'w'))) {
 		errno = EINVAL;
 		return NULL;
 	}
