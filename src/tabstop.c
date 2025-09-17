@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
 			return 255;
 		}
 	} else if ((argc - optind) == 1) {
-		// open infile, return 255 if failure
+		// open infile if there is one non-option argument, return 255 if failure
 		if (process_infile(hasOutfile, outfile, argv[optind])) {
 			return 255;
 		}

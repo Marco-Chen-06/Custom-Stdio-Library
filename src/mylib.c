@@ -20,6 +20,7 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 		}
 		// for reading, stream starts with 0 bytes left to read
 		stream->remaining = 0;
+		stream->end = 0;
 	}
 
 	//open the file for writing
@@ -30,6 +31,7 @@ struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
 		}
 		// for writing, stream starts with BUFSIZ bytes left to write
 		stream->remaining = BUFSIZ;
+		stream->end = &(stream->buf[0]) + BUFSIZ;
 	}
 	
 	// initialize the buffer data structure
@@ -48,21 +50,29 @@ struct MYSTREAM *myfdopen(int filedesc, const char *mode) {
 		return NULL;
 	}
 
+	// allocate memory for the stream
+	struct MYSTREAM *pStream;
+	pStream = (struct MYSTREAM *)malloc(sizeof(struct MYSTREAM));
 	// make sure the file descriptor is actually open, return NULL if not
 	if (fcntl(filedesc, F_GETFL) == -1) {
 		errno = EBADF;
 		return NULL;
 	}
 
-	// allocate memory for the stream
-	struct MYSTREAM *pStream;
-	pStream = (struct MYSTREAM *)malloc(sizeof(struct MYSTREAM));
+	if (*mode == 'r') {
+		// for reading, stream starts with 0 bytes left to read
+		pStream->remaining = 0;
+		pStream->end= 0;
+	}
+	if (*mode == 'w') {
+		// for writing, stream starts with BUFSIZ bytes left to write
+		pStream->remaining = BUFSIZ;
+		pStream->end = &(pStream->buf[0]) + BUFSIZ;
+	}
 
 	// initialize the buffer data structure
 	pStream->base = &(pStream->buf[0]);
 	pStream->ptr = &(pStream->buf[0]);
-
-	pStream->remaining = 0;
 
 	pStream->mode = *mode; 
 	pStream->fd = filedesc;
@@ -110,7 +120,7 @@ int myfputc(int c, struct MYSTREAM *stream) {
 	}
 
 	if (stream->remaining <= 0) {
-		int bytes_written;
+		int bytes_written; // variable used solely to check for partial write
 		// write BUFSIZE bytes of data to the stream, return -1 if failure
 		if ((bytes_written = write(stream->fd, stream->buf, BUFSIZ)) <= 0) {
 			return -1;
@@ -140,7 +150,7 @@ int myfclose(struct MYSTREAM *stream) {
 	// if fd of stream was opened for write only, flush buffer and close fd
 	if (stream->mode == 'w') {
 		int bytes_to_write = stream->ptr - stream->base;
-		int bytes_written;
+		int bytes_written; // variable used solely to check for partial write
 		// write remaining bytes to fd, return -1 if failure
 		if ((bytes_written = write(stream->fd, stream->buf, bytes_to_write)) <= 0){
 			return -1;
