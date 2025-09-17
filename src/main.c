@@ -1,3 +1,9 @@
+/*
+ * This main file is only for testing basic mylib.c functionality. It is not rigorous
+ * at all and really doesn't do much. 
+ * tabstop.c is the actual file that makes use of the mylib.c
+ */
+
 #include "mylib.h"
 
 int test_myfgetc();
