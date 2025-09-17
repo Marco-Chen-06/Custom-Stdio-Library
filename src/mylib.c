@@ -149,6 +149,7 @@ int myfclose(struct MYSTREAM *stream) {
 	}
 	// if fd of stream was opened for write only, flush buffer and close fd
 	if (stream->mode == 'w') {
+
 		int bytes_to_write = stream->ptr - stream->base;
 		int bytes_written; // variable used solely to check for partial write
 		// write remaining bytes to fd, return -1 if failure
@@ -159,9 +160,13 @@ int myfclose(struct MYSTREAM *stream) {
 			return -1;
 		}
 		
-		// close fd of stream, return -1 if failure
-		if (close(stream->fd) < 0) {
-			return -1;
+		// if fd is stdout, it doesn't need to be closed
+		if (stream->fd != 1) {
+			// close fd of stream, return -1 if failure
+			if (close(stream->fd) < 0) {
+				return -1;
+			}
+
 		}
 		free(stream);
 		stream = NULL;

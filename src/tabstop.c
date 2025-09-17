@@ -61,13 +61,12 @@ int process_stdin(bool hasOutfile, char *outfile) {
 	 */
 	write_to_output(outputStream, index, buf);
 
-	// close outfile if opened, return -1 if failure
-	if (hasOutfile) {
-		if (myfclose(outputStream) < 0) {
-			perror("myfclose error in process_stdin: ");
-			return -1;
-		}
+	// close outputStream, return -1 if failure
+	if (myfclose(outputStream) < 0) {
+		perror("myfclose error in process_stdin: ");
+		return -1;
 	}
+
 	return 0;
 }
 
@@ -131,12 +130,10 @@ int process_infile(bool hasOutfile, char *outfile, char *infile) {
 	write_to_output(outputStream, index, buf);
 
 
-	// close outfile if opened, return -1 if failure
-	if (hasOutfile) {
-		if (myfclose(outputStream) < 0) {
-			perror("myfclose error in process_infile: ");
-			return -1;
-		}
+	// close outputStream return -1 if failure
+	if (myfclose(outputStream) < 0) {
+		perror("myfclose error in process_infile: ");
+		return -1;
 	}
 	return 0;
 }
