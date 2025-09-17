@@ -3,12 +3,61 @@
 // process data from standard input, 
 int process_stdin(bool hasOutfile, char *outfile) {
 	struct MYSTREAM *stream;
+	char c;
+	// buf is BUFSIZ*4 bytes to avoid someone typing 4096 tabs and overflowing buffer
+	char buf[BUFSIZ*4];
+	char index; 
 
 	// open file, return -1 if unsuccessful
-	if ((stream = myfopen(0, "w")) == NULL) {
-		perror("error: ");
+	if ((stream = myfdopen(0, "r")) == NULL) {
+		perror("myfdopen error in process_stdin: ");
 		return -1;
 	}
+
+	while ((c = myfgetc(stream)) != EOF) {
+		if (c == '\t') {
+			for (int i = 0; i < 4; i++) {
+				buf[index++] = ' ';
+			}
+		} else {
+			buf[index++] = c;
+		}
+	}	
+
+	if (hasOutfile) {
+		// write to outfile, return -1 if failure
+		if ((stream = myfopen(outfile, "w")) == NULL) {
+			perror("myfopen error in process_stdin: ");
+			return -1;
+		}
+	} else {
+		// write to stdout, return -1 if failure
+		if ((stream = myfdopen(1, "w")) == NULL) {
+			perror("myfdopen error in process_stdin: ");
+			return -1;
+		}
+	}
+
+	/*
+	 * Current index is the number of bytes filled in buf, so 
+	 * we can treat index like a constant representing the bytes filled,
+	 * and use reverse_index to index the buffer and write sequentially to
+	 * either stdout or outfile.
+	 */
+	int reverse_index;
+	while (reverse_index <= index) {
+		myfputc(buf[reverse_index++], stream);
+	}
+
+
+	// close outfile if opened, return -1 if unsuccessful
+	if (hasOutfile) {
+		if (myfclose(stream) < 0) {
+			perror("myfclose error in process_stdin: ");
+			return -1;
+		}
+	}
+
 
 
 	return 0;
@@ -25,12 +74,12 @@ int main(int argc, char* argv[]) {
 			case 'o':
 				hasOutfile = true;
 				outfile = optarg;
-				printf("found output with %s\n", outfile);
 				break;
 			case ':':
-				printf("NO OPTION FOR AN O DETECTED!!");
+				// return error if no option after -o detected
 				return 255;
 			case '?':
+				// return error if flag is anything other than -o
 				return 255;
 		}
 	}

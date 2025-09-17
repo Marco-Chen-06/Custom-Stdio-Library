@@ -73,7 +73,7 @@ struct MYSTREAM *myfdopen(int filedesc, const char *mode) {
 
 int myfgetc(struct MYSTREAM *stream) {
 	// make sure fd of stream was opened for read only, return -1 if not
-	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) != O_RDONLY) {
+	if (stream->mode != 'r') {
 		errno = EBADF;
 		return -1;
 	}
@@ -104,7 +104,7 @@ int myfgetc(struct MYSTREAM *stream) {
 
 int myfputc(int c, struct MYSTREAM *stream) {
 	// make sure fd of stream was opened for write only, return -1 if not
-	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) != O_WRONLY) {
+	if (stream->mode != 'w') {
 		errno = EBADF;
 		return -1;
 	}
@@ -128,7 +128,7 @@ int myfputc(int c, struct MYSTREAM *stream) {
 
 int myfclose(struct MYSTREAM *stream) {
 	// if fd of stream was opened for read only, close fd
-	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) == O_RDONLY) {
+	if (stream->mode == 'r') {
 		// close fd of stream, return -1 if failure
 		if (close(stream->fd) < 0) {
 			return -1;
@@ -138,11 +138,11 @@ int myfclose(struct MYSTREAM *stream) {
 		return 0;
 	}
 	// if fd of stream was opened for write only, flush buffer and close fd
-	if ((fcntl(stream->fd, F_GETFL) & O_ACCMODE) == O_WRONLY) {
+	if (stream->mode == 'w') {
 		int bytes_to_write = stream->ptr - stream->base;
 		int bytes_written;
 		// write remaining bytes to fd, return -1 if failure
-		if ((bytes_written = write(stream->fd, stream->buf, bytes_to_write)) <= 0) {
+		if ((bytes_written = write(stream->fd, stream->buf, bytes_to_write)) <= 0){
 			return -1;
 		} else if (bytes_written < bytes_to_write) {
 			// treat partial write as an error
@@ -153,7 +153,7 @@ int myfclose(struct MYSTREAM *stream) {
 		if (close(stream->fd) < 0) {
 			return -1;
 		}
-		free (stream);
+		free(stream);
 		stream = NULL;
 		return 0;
 	}
