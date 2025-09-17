@@ -1,0 +1,437 @@
+// Test file for tabstop: A big concatenation of tabstop.c, tabstop.h, mylib.c, and mylib.h.
+// All these files combined should be more than BUFSIZ bytes, and there are many tabs.
+
+/*
+ * tabstop.c -- process input one char at a time, replace tabs with 4 spaces
+ * Cooper Union ECE357 Operating Systems Pset1
+ */
+
+#include "tabstop.h"
+
+// helper function used to write all relevant elements from a buffer to an output stream
+int write_to_output(struct MYSTREAM *outputStream, int bytes_filled, char *buf) {
+	int index = 0;
+	while (index < bytes_filled) {
+		myfputc(buf[index++], outputStream);
+	}
+	return 0;
+}
+
+/*
+ * Process data from stdin, and write it to outfile or stdout depending on hasOutfile.
+ * Only a maximum of BUFSIZ bytes can be processed from stdin.
+ * Note: Process is used as a verb and not a noun in this naming convention.
+ */
+int process_stdin(bool hasOutfile, char *outfile) {
+	struct MYSTREAM *inputStream;
+	struct MYSTREAM *outputStream;
+	char c;
+
+	// buf is BUFSIZ*4 bytes to avoid someone typing BUFSIZ tabs and overflowing buffer
+	char buf[BUFSIZ*4];
+	int index = 0; // current index of buf (also represents num bytes to write)
+
+	// open stdin, return -1 if failure
+	if ((inputStream = myfdopen(0, "r")) == NULL) {
+		perror("myfdopen error in process_stdin: ");
+		return -1;
+	}
+
+	if (hasOutfile) {
+		// open outfile, return -1 if failure
+		if ((outputStream = myfopen(outfile, "w")) == NULL) {
+			perror("myfopen error in process_stdin: ");
+			return -1;
+		}
+	} else {
+		// open stdout, return -1 if failure
+		if ((outputStream = myfdopen(1, "w")) == NULL) {
+			perror("myfdopen error in process_stdin: ");
+			return -1;
+		}
+	}
+
+
+	// process standard input and put it into buffer
+	while ((c = myfgetc(inputStream)) != EOF) {
+		if (c == '\t') {
+			// replace tabs with 4 spaces
+			for (int i = 0; i < 4; i++) {
+				buf[index++] = ' ';
+			}
+		} else {
+			// process other characters like normal
+			buf[index++] = c;
+		}
+	}	
+
+	/*
+	 * write contents of buf to outputStream. Index acts as the number of
+	 * bytes_filled in this function call.
+	 */
+	write_to_output(outputStream, index, buf);
+
+	// close outputStream, return -1 if failure
+	if (myfclose(outputStream) < 0) {
+		perror("myfclose error in process_stdin: ");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * Process data from infile, and write it to outfile or stdout depending on hasOutfile.
+ * In contract to process_stdin, more than BUFSIZ bytes can be processed from infile.
+ */
+int process_infile(bool hasOutfile, char *outfile, char *infile) {
+	struct MYSTREAM *inputStream;
+	struct MYSTREAM *outputStream;
+	char c;
+
+	// buf is still BUFSIZ*4 bytes to avoid a file with BUFSIZ tabs and overflowing buf
+	char buf[BUFSIZ*4];
+	int index = 0; // current index of buf (also represents num bytes to write)
+	int count = 0; // current number of bytes read from infile
+
+	// open infile, return -1 if failure
+	if ((inputStream = myfopen(infile, "r")) == NULL) {
+		perror("myfopen error in process_infile: ");
+		return -1;
+	}
+
+	if (hasOutfile) {
+		// open outfile, return -1 if failure
+		if ((outputStream = myfopen(outfile, "w")) == NULL) {
+			perror("myfopen error in process_infile");
+			return -1;
+		}
+	} else {
+		// open stdout, return -1 if failure
+		if ((outputStream = myfdopen(1, "w")) == NULL) {
+			perror("myfdopen error in process_infile: ");
+			return -1;
+		}
+	}
+
+	while ((c = myfgetc(inputStream)) != EOF) {
+		if (count >= BUFSIZ) {
+			// write contents of buf to outputStream
+			write_to_output(outputStream, index, buf);
+			
+			/*
+			 * reinitialize counters, and leave buf as is because its data
+			 * will be overwritten by the next write syscalls
+			 */
+			count = 0;
+			index = 0;
+		}
+		
+		if (c == '\t') {
+			// replace tabs with 4 spaces
+			for (int i = 0; i < 4; i++) {
+				buf[index++] = ' ';
+			}
+		} else {
+			// process other characters like normal
+			buf[index++] = c;
+		}
+		count++;
+	}
+	write_to_output(outputStream, index, buf);
+
+
+	// close outputStream return -1 if failure
+	if (myfclose(outputStream) < 0) {
+		perror("myfclose error in process_infile: ");
+		return -1;
+	}
+	return 0;
+}
+
+int main(int argc, char* argv[]) {
+	struct MYSTREAM *stream;
+	int opt = 0;
+
+	bool hasOutfile = false;
+	char *outfile = NULL; // points to the outfile, if it is provided
+	while ((opt = getopt(argc, argv, ":o:")) != -1) {
+		switch(opt) {
+			case 'o':
+				hasOutfile = true;
+				outfile = optarg;
+				break;
+			case ':':
+				// return error if no option after -o detected
+				return 255;
+			case '?':
+				// return error if flag is anything other than -o
+				return 255;
+		}
+	}
+
+	// there shouldn't be more than 1 non-option argument. If there is, return 255.
+	if ((argc - optind) > 1) {
+		return 255;
+	}
+
+	// if there is no non-option argument, open stdin for writing. Otherwise, open infile.
+	if ((argc - optind) == 0) {
+		// open standard input, return 255 if failure
+		if (process_stdin(hasOutfile, outfile)) {
+			return 255;
+		}
+	} else if ((argc - optind) == 1) {
+		// open infile if there is one non-option argument, return 255 if failure
+		if (process_infile(hasOutfile, outfile, argv[optind])) {
+			return 255;
+		}
+		return 0;
+	}
+	return 0;
+}
+
+/*
+ * tabstop.h -- process input one character at a time, replace tabs with 4 spaces
+ * Cooper Union ECE357 Operating Systems Pset1
+ */
+
+#include "mylib.h"
+
+int write_to_output(struct MYSTREAM *outputStream, int bytes_filled, char *buf);
+int process_stdin(bool hasOutfile, char *outfile);
+int process_infile(bool hasOutfile, char *outfile, char *infile);
+
+/*
+ * mylib.c -- greatly reduced feature set stdio library implementation file
+ * Cooper Union ECE357 - Operating Systems Pset1
+ */
+
+#include "mylib.h"
+#include <errno.h>
+
+/*
+ * I didn't comment the names of the function prototypes because all functions
+ * are intended to do exactly as the pset1 instructions. However, I commented
+ * myfclose because I have one extra bit of logic for "closing" stdout for writing
+ * which was not explicitly specified in the pset1 instructions.
+ */
+
+struct MYSTREAM *myfopen(const char *pathname, const char *mode) {
+	// make sure mode is either "r" or "w", return NULL if not
+	if ((mode == NULL) || ((*mode != 'r') && (*mode != 'w'))) {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	// allocate memory for the stream
+	struct MYSTREAM *stream;
+	stream = (struct MYSTREAM *)malloc(sizeof(struct MYSTREAM));
+
+	// open the file for reading
+	if (*mode == 'r') {
+		// open file for read only, return NULL if not
+		if ((stream->fd = open(pathname, O_RDONLY)) < 0) {
+			return NULL;
+		}
+		// for reading, stream starts with 0 bytes left to read
+		stream->remaining = 0;
+		stream->end = 0;
+	}
+
+	//open the file for writing
+	if (*mode == 'w') {
+		// open file for write only, return NULL if not
+		if ((stream->fd = open(pathname, O_WRONLY)) < 0) {
+			return NULL;
+		}
+		// for writing, stream starts with BUFSIZ bytes left to write
+		stream->remaining = BUFSIZ;
+		stream->end = &(stream->buf[0]) + BUFSIZ;
+	}
+	
+	// initialize the buffer data structure
+	stream->base = &(stream->buf[0]);
+	stream->ptr = &(stream->buf[0]);
+
+	stream->mode = *mode;
+
+	return stream;
+}
+
+struct MYSTREAM *myfdopen(int filedesc, const char *mode) {
+	// make sure mode is either "r" or "w", return NULL if not
+	if ((mode == NULL) || ((*mode != 'r') && (*mode != 'w'))) {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	// allocate memory for the stream
+	struct MYSTREAM *pStream;
+	pStream = (struct MYSTREAM *)malloc(sizeof(struct MYSTREAM));
+	// make sure the file descriptor is actually open, return NULL if not
+	if (fcntl(filedesc, F_GETFL) == -1) {
+		errno = EBADF;
+		return NULL;
+	}
+
+	if (*mode == 'r') {
+		// for reading, stream starts with 0 bytes left to read
+		pStream->remaining = 0;
+		pStream->end= 0;
+	}
+	if (*mode == 'w') {
+		// for writing, stream starts with BUFSIZ bytes left to write
+		pStream->remaining = BUFSIZ;
+		pStream->end = &(pStream->buf[0]) + BUFSIZ;
+	}
+
+	// initialize the buffer data structure
+	pStream->base = &(pStream->buf[0]);
+	pStream->ptr = &(pStream->buf[0]);
+
+	pStream->mode = *mode;
+	pStream->fd = filedesc;
+
+	
+	return pStream;
+}
+
+int myfgetc(struct MYSTREAM *stream) {
+	// make sure fd of stream was opened for read only, return -1 if not
+	if (stream->mode != 'r') {
+		errno = EBADF;
+		return -1;
+	}
+
+	// if no data in buffer, populate it with at most BUFSIZ bytes of data 	
+	if (stream->remaining <= 0) {
+		// read BUFSIZ bytes of data, return -1 if failure
+		if ((stream->remaining = read(stream->fd, stream->buf, BUFSIZ)) < 0) {
+			return -1;
+		}
+
+		// if end of file has been reached, return the value EOF
+		if (stream->remaining == 0) {
+			return -1;
+		}
+
+		// if data was read from the file, initialize pointers
+		stream->end = stream->base + stream->remaining;
+		stream->ptr = stream->base;
+	}
+
+	// update buffer data structure and return the requested character
+	int output_char;
+	output_char = *(stream->ptr++);
+	stream->remaining = stream->end - stream->ptr;
+	return output_char;
+}
+
+int myfputc(int c, struct MYSTREAM *stream) {
+	// make sure fd of stream was opened for write only, return -1 if not
+	if (stream->mode != 'w') {
+		errno = EBADF;
+		return -1;
+	}
+
+	if (stream->remaining <= 0) {
+		int bytes_written; // variable used solely to check for partial write
+		// write BUFSIZE bytes of data to the stream, return -1 if failure
+		if ((bytes_written = write(stream->fd, stream->buf, BUFSIZ)) <= 0) {
+			return -1;
+		} else if (bytes_written < 4096) {
+			// treat partial write as an error
+			return -1;
+		}
+		stream->ptr = stream->base;
+	}
+
+	*(stream->ptr++) = c;
+	stream->remaining = stream->end - stream->ptr;
+	return c;
+}
+
+/*
+ * If stream was opened for reading, close the file descriptor.
+ * If the stream was opened for writing, call write to flush the buffer,
+ * then close the file descriptor. If the fd was stdout, don't close the
+ * file descriptor.
+ * Return 0 for success, return -1 for failure
+ */
+int myfclose(struct MYSTREAM *stream) {
+	// if fd of stream was opened for read only, close fd
+	if (stream->mode == 'r') {
+		// close fd of stream, return -1 if failure
+		if (close(stream->fd) < 0) {
+			return -1;
+		}
+		free(stream);
+		stream = NULL;
+		return 0;
+	}
+	// if fd of stream was opened for write only, flush buffer and close fd
+	if (stream->mode == 'w') {
+		int bytes_to_write = stream->ptr - stream->base;
+		int bytes_written; // variable used solely to check for partial write
+		// write remaining bytes to fd, return -1 if failure
+		if ((bytes_written = write(stream->fd, stream->buf, bytes_to_write)) <= 0){
+			return -1;
+		} else if (bytes_written < bytes_to_write) {
+			// treat partial write as an error
+			return -1;
+		}
+		
+		// if fd is stdout, it doesn't need to be closed
+		if (stream->fd != 1) {
+			// close fd of stream, return -1 if failure
+			if (close(stream->fd) < 0) {
+				return -1;
+			}
+
+		}
+		free(stream);
+		stream = NULL;
+		return 0;
+	}
+	/*
+	 * The program should only reach this condition if the file was
+	 * not opened for either read or write only. Nonetheless, this
+	 * indicates an error.
+	 */
+	return -1;
+}
+
+/*
+ * mylib.h -- greatly reduced feature set stdio library header file
+ * Cooper Union ECE357 Operating Systems Pset1
+ */
+
+#ifndef MY_LIB_H
+#define MY_LIB_H
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdbool.h>
+
+// somewhat based on GNU libc IO_FILE structure
+struct MYSTREAM{
+	char* ptr; // pointer to current index of buffer
+	char* base; // base address of buffer
+	char* end; // address of last element of buffer
+	char buf[BUFSIZ]; // stores read or write data
+	int remaining;  // number of characters left in the buffer
+	char mode; // read, write, or error
+	int fd; // file descriptor
+};
+
+struct MYSTREAM *myfopen(const char *pathname, const char *mode);
+struct MYSTREAM *myfdopen(int filedesc, const char *mode);
+int myfgetc(struct MYSTREAM *stream);
+int myfputc(int c, struct MYSTREAM *stream);
+int myfclose(struct MYSTREAM *stream);
+
+#endif
