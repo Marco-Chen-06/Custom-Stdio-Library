@@ -1,2 +1,3 @@
-# mylib
-ece357 pset1 mylib.h and mylib.c
+# Custom STDIO Library
+
+ECE357 - Custom implementations of fopen, fputc, fgetc, fclose, fclose in file-buffered mode.
